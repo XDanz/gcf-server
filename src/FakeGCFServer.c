@@ -66,29 +66,23 @@ void HandleTCPClient(int clntSocket, FILE* file) {
     char *line = NULL;
     size_t l = 0;
     ssize_t read;
-    int milliseconds = 3;
-    while ((read = getline(&line, &l, file)) != NULL) {
+    while ((read = getline(&line, &l, file)) != -1) {
         memset(&send_buffer, 0, sizeof(BUFSIZE));       // Zero out structure
         int size = read;
         send_buffer[0] = (size >> 8) & 0xFF;
         send_buffer[1] = size & 0xFF;
         send_buffer[2] = 'S';
         strncpy(send_buffer+3, line, size);
-//        struct timespec ts;
-//        ts.tv_sec = milliseconds / 1000;
-//        ts.tv_nsec = (milliseconds % 1000) * 1000000;
-//        nanosleep(&ts, NULL);
 
         if ((sent = send(clntSocket, send_buffer, size+2, 0)) < 0 ) {
             fprintf(stderr, "send() failed with line \"%s\"\n", line);
             fprintf(stderr, "'%s'", send_buffer);
             DieWithSystemMessage("send() failed");
         }
-        printf(" Send %s \n", line);
     }
 
     printf("DONE\n");
-    fclose(file);
+    //fclose(file);
 
     close(clntSocket); // Close client socket
 }
@@ -148,7 +142,9 @@ int main(int argc, char *argv[]) {
         else
             puts("Unable to get client address");
 
+        printf(" HandleTCPClient => \n");
         HandleTCPClient(clntSock, file);
+        printf(" HandleTCPClient => done \n");
     }
     // NOT REACHED
 }
