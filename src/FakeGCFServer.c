@@ -10,13 +10,35 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <asm/errno.h>
+#include <errno.h>
+#include <assert.h>
 
 static const int MAXPENDING = 5; // Maximum outstanding connection requests
 
 int USERNAME_LEN = 6;
 
+ssize_t rio_writen(int fd, void *usrbuf, size_t n)
+{
+    size_t nleft = n;
+    ssize_t nwritten;
+    char *bufp = usrbuf;
 
-void HandleTCPClient(int clntSocket, FILE* file) {
+    while (nleft > 0) {
+	if ((nwritten = write(fd, bufp, nleft)) <= 0) {
+	    if (errno == EINTR)  /* interrupted by sig handler return */
+		nwritten = 0;    /* and call write() again */
+	    else
+	      fprintf(stderr, "Rio_writen error");
+		return -1;       /* errorno set by write() */
+	}
+	nleft -= nwritten;
+	bufp += nwritten;
+    }
+    return n;
+}
+
+void HandleTCPClient(int clntSocket, const char* file) {
     char recv_buffer[BUFSIZE];
     char send_buffer[1000000];
 
@@ -24,7 +46,6 @@ void HandleTCPClient(int clntSocket, FILE* file) {
     ssize_t numBytesRcvd = recv(clntSocket, recv_buffer, BUFSIZE, 0);
 
     short len = (short)((unsigned char)recv_buffer[0] << 8 | (unsigned char)recv_buffer[1]);
-    printf("Len is %d\n", len);
     char loginRequestPacket  = recv_buffer[2];
     if (loginRequestPacket == 'L')
         printf("Login packet!\n");
@@ -62,27 +83,50 @@ void HandleTCPClient(int clntSocket, FILE* file) {
 
 
     printf("Sent %zu bytes\n", sent);
-
+    FILE* fp;
     char *line = NULL;
+
     size_t l = 0;
     ssize_t read;
-    while ((read = getline(&line, &l, file)) != -1) {
-        memset(&send_buffer, 0, sizeof(BUFSIZE));       // Zero out structure
-        int size = read;
-        send_buffer[0] = (size >> 8) & 0xFF;
-        send_buffer[1] = size & 0xFF;
-        send_buffer[2] = 'S';
-        strncpy(send_buffer+3, line, size);
+    fp = fopen(file, "r");
 
-        if ((sent = send(clntSocket, send_buffer, size+2, 0)) < 0 ) {
-            fprintf(stderr, "send() failed with line \"%s\"\n", line);
-            fprintf(stderr, "'%s'", send_buffer);
-            DieWithSystemMessage("send() failed");
+    if(fp == NULL)
+        exit(EXIT_FAILURE);
+
+    int fileSequence = 1;
+    while ((read = getline(&line, &l, fp)) != -1) {
+        if (fileSequence++ >= seq) {
+            memset(&send_buffer, 0, sizeof(BUFSIZE));       // Zero out structure
+            int size = read;
+
+            send_buffer[0] = (size >> 8) & 0xFF;
+            send_buffer[1] = size & 0xFF;
+            send_buffer[2] = 'S';
+            strncpy(send_buffer+3, line, size-1); // Do not include trailing '\n'
+            // size include '\n' (payload = size-1)
+            // total package = payload+type(1)+headersize(2) = size-1+1+2)
+            if ((sent = rio_writen(clntSocket, send_buffer, size+2)) < 0 ) {
+                fprintf(stderr, "send() failed with line \"%s\"", line);
+                fprintf(stderr, "send size %d ", size+2);
+                //break;
+                DieWithSystemMessage("send() failed!");
+            }
+            //printf ("sent=%d, (payload=%d)\n", sent, size);
+            assert(sent == (size+2));
         }
+
     }
+    //char *ptr = send_buffer;
+    send_buffer[0] = 0x00;
+    send_buffer[1] = 0x01;
+    send_buffer[2] = 'z';
+
+    if ((sent = send(clntSocket, send_buffer, 3, 0)) < 0 )
+        DieWithSystemMessage("send() failed");
 
     printf("DONE\n");
-    //fclose(file);
+    free(line);
+    fclose(fp);
 
     close(clntSocket); // Close client socket
 }
@@ -143,7 +187,7 @@ int main(int argc, char *argv[]) {
             puts("Unable to get client address");
 
         printf(" HandleTCPClient => \n");
-        HandleTCPClient(clntSock, file);
+        HandleTCPClient(clntSock, argv[2]);
         printf(" HandleTCPClient => done \n");
     }
     // NOT REACHED
