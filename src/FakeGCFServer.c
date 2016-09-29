@@ -122,7 +122,8 @@ void HandleTCPClient(int clntSocket, const char* file) {
                 break;
                 //DieWithSystemMessage("send() failed!");
             }
-            printf ("(seq=%d ,sent=%d, payloadsize=%d) %s", fileSequence, sent, size, line);
+            printf ("(seq=%d ,sent=%d,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence, sent,send_buffer[0],send_buffer[1], send_buffer[2],
+                    size, line);
             assert(sent == (size+2));
         }
     }
