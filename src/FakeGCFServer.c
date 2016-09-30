@@ -16,37 +16,25 @@
 #include "Rio.h"
 
 static const int MAXPENDING = 5; // Maximum outstanding connection requests
+#define USERNAME_LEN 6
+#define PASSWD_LEN 10
+#define SESSION_LEN 10
+#define REQ_SEQ_LEN 20
+#define LOGIN_REQ_PACKET_LEN 49
 
-int USERNAME_LEN = 6;
-int PASSWD_LEN = 10;
-int SESSION_LEN = 10;
-int REQ_SEQ_LEN = 20;
-int LOGIN_REQ_PACKET_LEN = 49;
-//ssize_t rio_writen(int fd, void *usrbuf, size_t n)
-//{
-//    size_t nleft = n;
-//    ssize_t nwritten;
-//    char *bufp = usrbuf;
-//
-//    while (nleft > 0) {
-//        if ((nwritten = write(fd, bufp, nleft)) <= 0) {
-//            if (errno == EINTR)  /** interrupted by sig handler return* */
-//                nwritten = 0;    /** and call write() again **/
-//            else
-//                fprintf(stderr, "Rio_writen error");
-//            return -1;       /** errorno set by write() */
-//        }
-//        nleft -= nwritten;
-//        bufp += nwritten;
-//    }
-//    return n;
-//}
+
+
 char recv_buffer[BUFSIZE];
 char send_buffer[1000000];
 
 long HandleLogin(int clntSocket) {
     // Receive message from client
-    char userName[USERNAME_LEN+1], passWord[PASSWD_LEN+1], session[SESSION_LEN+1], reqSeqNum[20+1];
+
+    char userName[USERNAME_LEN+1] = {0};
+    char passWord[PASSWD_LEN+1] = {0};
+    char session[SESSION_LEN+1] = {0};
+    char reqSeqNum[REQ_SEQ_LEN+1] = {0};
+
     ssize_t numBytesRcvd = rio_readn(clntSocket, recv_buffer, LOGIN_REQ_PACKET_LEN);
 
     short len = (short)((unsigned char)recv_buffer[0] << 8 | (unsigned char)recv_buffer[1]);
@@ -75,6 +63,7 @@ long HandleLogin(int clntSocket) {
     printf("Seq '%ld'\n", seq);
 
     //char *ptr = send_buffer;
+    memset(&send_buffer, 0, sizeof(BUFSIZE));       // Zero out structure
     send_buffer[0] = (31 >> 8) & 0xFF;
     send_buffer[1] = 31 & 0xFF;
     send_buffer[2] = 'A';
@@ -86,7 +75,9 @@ long HandleLogin(int clntSocket) {
         DieWithSystemMessage("send() failed");
 
 
-    printf("Sent %zu bytes\n", sent);
+    printf ("(seq=%d ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) '%s' \n", 0, sent,send_buffer[0],send_buffer[1], send_buffer[2],
+            31, send_buffer+3);
+    //printf("Sent %zu bytes\n", sent);
     return seq;
 }
 
@@ -122,7 +113,7 @@ void HandleTCPClient(int clntSocket, const char* file) {
                 break;
                 //DieWithSystemMessage("send() failed!");
             }
-            printf ("(seq=%d ,sent=%d,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence, sent,send_buffer[0],send_buffer[1], send_buffer[2],
+            printf ("(seq=%d ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence, sent,send_buffer[0],send_buffer[1], send_buffer[2],
                     size, line);
             assert(sent == (size+2));
         }
