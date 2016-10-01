@@ -10,3 +10,4 @@ set(SOURCE_FILES src/FakeGCFServer.c src/DieWithMessage.c include/Pratical.h src
 add_executable(gcf_server ${SOURCE_FILES})
 
 add_executable(readFromFile src/readFromFile.c)
+add_executable(test_snprintf src/test_snprintf.c)

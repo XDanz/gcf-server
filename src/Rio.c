@@ -5,6 +5,7 @@
 #include <wchar.h>
 #include <zconf.h>
 #include <errno.h>
+#include <string.h>
 #include "Rio.h"
 
 ssize_t rio_writen(int fd, void *usrbuf, size_t n)
@@ -17,8 +18,9 @@ ssize_t rio_writen(int fd, void *usrbuf, size_t n)
         if ((nwritten = write(fd, bufp, nleft)) <= 0) {
             if (errno == EINTR)  /** interrupted by sig handler return* */
                 nwritten = 0;    /** and call write() again **/
-            else
-                fprintf(stderr, "Rio_writen error");
+            else {
+                fprintf(stderr, "Rio_writen error: %s\n", strerror(errno) );
+            }
             return -1;       /** errorno set by write() */
         }
         nleft -= nwritten;
