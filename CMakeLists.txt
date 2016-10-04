@@ -11,3 +11,8 @@ add_executable(gcf_server ${SOURCE_FILES})
 
 add_executable(readFromFile src/readFromFile.c)
 add_executable(test_snprintf src/test_snprintf.c)
+
+add_executable(mc_server src/MultiCastServer.c)
+
+add_executable(mc_client src/MultiCastListener.c)
+add_executable(udp_client src/UdpClient.c)
