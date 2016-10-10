@@ -19,13 +19,13 @@
 #include <unistd.h>
 #include <Pratical.h>
 
-#define HELLO_PORT 12345
+#define HELLO_PORT 6300
 #define HELLO_GROUP "225.0.0.37"
 
 main(int argc, char *argv[])
 {
     struct sockaddr_in addr;
-    int fd, cnt;
+    int fd;
     struct ip_mreq mreq;
     char *message="Hello, World!";
 
@@ -47,7 +47,7 @@ main(int argc, char *argv[])
         exit (1);
     }
 
-    /* set up destination Multicast address */
+    /// set up destination Multicast address
     memset(&addr, 0 , sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(HELLO_GROUP);
@@ -94,29 +94,18 @@ main(int argc, char *argv[])
         perror("ERROR on binding");
     }
 
-    /*
-     * main loop: wait for a datagram, then echo it
-     */
-    clientlen = sizeof(clientaddr);
-
-
+    ssize_t sent  = 0;
     /* now just sendto() our destination! */
     while (1) {
         /*
         * recvfrom: receive a UDP datagram from a client
         */
-        bzero(buf, BUFSIZE);
-        n = recvfrom(sockfd, buf, BUFSIZE, 0,
-                (struct sockaddr*) &clientaddr, &clientlen);
-        if (n<0) {
-            perror("ERROR in recvfrom");
-        }
 
-
-        if (sendto(fd, buf, n, 0 , (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        if ((sent = sendto(fd, message, strlen(message), 0 , (struct sockaddr *) &addr, sizeof(addr))) < 0) {
             perror("sendto");
             exit(1);
         }
+        printf("Send.. %zd\n", sent);
         sleep(1);
     }
 }

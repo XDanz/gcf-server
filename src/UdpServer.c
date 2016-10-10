@@ -29,7 +29,7 @@ void error(char *msg) {
 
 int main(int argc, char **argv) {
     int sockfd; /* socket */
-    int portno; /* port to listen on */
+    int portno; /// port to listen on
     int clientlen; /* byte size of client's address */
     struct sockaddr_in serveraddr; /* server's addr */
     struct sockaddr_in clientaddr; /* client addr */
@@ -42,7 +42,8 @@ int main(int argc, char **argv) {
     /*
      * check command line arguments
      */
-    if (argc != 2) {
+    if (argc != 2)
+    {
         fprintf(stderr, "usage: %s <port>\n", argv[0]);
         exit(1);
     }
@@ -61,8 +62,12 @@ int main(int argc, char **argv) {
      * Eliminates "ERROR on binding: Address already in use" error.
      */
     optval = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
-            (const void *)&optval , sizeof(int));
+    if ( setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR,
+            (const void *)&optval , sizeof(int))< 0)
+    {
+        perror("SetSockOpt failed \n");
+        exit(1);
+    }
 
     /*
      * build the server's Internet address
@@ -75,8 +80,7 @@ int main(int argc, char **argv) {
     /*
      * bind: associate the parent socket with a port
      */
-    if (bind(sockfd, (struct sockaddr *) &serveraddr,
-            sizeof(serveraddr)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
         error("ERROR on binding");
 
     /*
@@ -85,12 +89,12 @@ int main(int argc, char **argv) {
     clientlen = sizeof(clientaddr);
     while (1) {
 
-        /*
+        /**
          * recvfrom: receive a UDP datagram from a client
          */
         bzero(buf, BUFSIZE);
-        n = recvfrom(sockfd, buf, BUFSIZE, 0,
-                (struct sockaddr *) &clientaddr, &clientlen);
+        n = recvfrom(sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &clientaddr, &clientlen);
+        printf("Recv %zd", n);
         if (n < 0)
             error("ERROR in recvfrom");
 
@@ -108,12 +112,5 @@ int main(int argc, char **argv) {
                 hostp->h_name, hostaddrp);
         printf("server received %d/%d bytes: %s\n", strlen(buf), n, buf);
 
-        /*
-         * sendto: echo the input back to the client
-         */
-        n = sendto(sockfd, buf, strlen(buf), 0,
-                (struct sockaddr *) &clientaddr, clientlen);
-        if (n < 0)
-            error("ERROR in sendto");
     }
 }
