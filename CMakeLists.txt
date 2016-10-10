@@ -16,3 +16,5 @@ add_executable(mc_server src/MultiCastServer.c)
 
 add_executable(mc_client src/MultiCastListener.c)
 add_executable(udp_client src/UdpClient.c)
+
+add_executable(test_fill src/test.c)
