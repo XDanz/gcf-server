@@ -16,9 +16,6 @@
 #include <unistd.h>
 #include <Pratical.h>
 
-#define HELLO_PORT 12345
-#define HELLO_GROUP "225.0.0.37"
-
 main(int argc, char *argv[])
 {
     int fd, cnt;
@@ -89,9 +86,9 @@ main(int argc, char *argv[])
 
 
     /* Join the multicast group <GROUP> on the local 203.106.93.94 */
-/* interface. Note that this IP_ADD_MEMBERSHIP option must be */
-/* called for each local interface over which the multicast */
-/* datagrams are to be received. */
+    /* interface. Note that this IP_ADD_MEMBERSHIP option must be */
+    /* called for each local interface over which the multicast */
+    /* datagrams are to be received. */
     mreq.imr_multiaddr.s_addr = inet_addr(argv[1]);
     mreq.imr_interface.s_addr = INADDR_ANY;
     if(setsockopt(mc_sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq, sizeof(mreq)) < 0)
@@ -107,7 +104,7 @@ main(int argc, char *argv[])
      */
     bzero((char *) &dst_addr, sizeof(dst_addr));
     dst_addr.sin_family = AF_INET;
-    dst_addr.sin_addr.s_addr = htonl(argv[3]);
+    inet_aton(argv[3], &dst_addr.sin_addr);
     dst_addr.sin_port = htons((unsigned short)atoi(argv[4]));
 
     ssize_t sent = 0;
@@ -117,8 +114,7 @@ main(int argc, char *argv[])
         * recvfrom: receive a UDP datagram from a client
         */
         bzero(buf, BUFSIZE);
-        n = recvfrom(mc_sockfd, buf, BUFSIZE, 0,
-                     (struct sockaddr*) NULL, NULL);
+        n = recvfrom(mc_sockfd, buf, BUFSIZE, 0, (struct sockaddr*) NULL, NULL);
         if (n<0) {
             perror("ERROR in recvfrom");
         }

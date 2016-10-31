@@ -15,7 +15,7 @@ add_executable(test_snprintf src/test_snprintf.c)
 add_executable(mc_server src/FakeMultiCastProducer.c)
 
 add_executable(mc_client src/MultiCastListener.c)
-add_executable(udp_client src/UdpClient.c)
+add_executable(Udp_client src/UdpClient.c)
 add_executable(udp_server src/UdpServer.c)
 add_executable(mc_proxy src/MultiCastProxy.c)
 
