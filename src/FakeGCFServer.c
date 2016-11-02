@@ -3,15 +3,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <string.h>
 #include <stdio.h>
 #include <Pratical.h>
 #include <stdlib.h>
-#include <sys/wait.h>
-#include <time.h>
-#include <asm/errno.h>
-#include <errno.h>
 #include <assert.h>
 #include "Rio.h"
 #include <netinet/tcp.h>
@@ -23,7 +18,9 @@ static const int MAXPENDING = 5; // Maximum outstanding connection requests
 #define LOGIN_REQ_PACKET_LEN 49
 
 #define LOGIN_ACC_PACKET_LEN 33
+#define SOUP_HEARTBEAT_LEN 3
 
+#define DEBUG 0
 
 
 char recv_buffer[BUFSIZE];
@@ -61,7 +58,12 @@ long ReadStartSequence(int clntSocket, char *rcvSess) {
 
     long seq = atol(reqSeqNum);
     return seq;
+}
 
+long ReadHeartBeat(int clntSocket) {
+    char buf[SOUP_HEARTBEAT_LEN+1] = {0};
+    ssize_t numBytesRcvd = rio_readn(clntSocket, buf, SOUP_HEARTBEAT_LEN);
+    printf("Recv Heartbeat '%zu'\n", numBytesRcvd);
 }
 
 long HandleLogin(int clntSocket) {
@@ -83,8 +85,9 @@ long HandleLogin(int clntSocket) {
     if ((sent = rio_writen(clntSocket, sndBuf, 33)) < 0 )
         DieWithSystemMessage("send() failed");
 
-    printf ("(seq=%d ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) '%s' \n", 0, sent,sndBuf[0],sndBuf[1], sndBuf[2],
-            31, sndBuf+3);
+    if (DEBUG)
+        printf ("(seq=%d ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) '%s' \n", 0, sent,sndBuf[0],sndBuf[1], sndBuf[2],
+                31, sndBuf+3);
     //printf("Sent %zu bytes\n", sent);
     return seq;
 }
@@ -122,8 +125,10 @@ void HandleTCPClient(int clntSocket, const char* file) {
                 break;
                 //DieWithSystemMessage("send() failed!");
             }
-            printf ("(seq=%ld ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence-1, sent,send_buffer[0],send_buffer[1], send_buffer[2],
-                    size, line);
+
+            if(DEBUG)
+                printf ("(seq=%ld ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence-1, sent,send_buffer[0],send_buffer[1], send_buffer[2],
+                        size, line);
             assert(sent == (size+2));
         }
     }
@@ -139,6 +144,7 @@ void HandleTCPClient(int clntSocket, const char* file) {
 
     printf("Total lines written %ld !\n", fileSequence-seq);
     free(line);
+    ReadHeartBeat(clntSocket);
     fclose(fp);
 
     close(clntSocket); // Close client socket
