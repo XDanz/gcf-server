@@ -3,7 +3,7 @@
 //
 #include <stdio.h>
 #include <wchar.h>
-#include <zconf.h>
+#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include "Rio.h"
