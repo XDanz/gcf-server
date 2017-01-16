@@ -20,3 +20,4 @@ add_executable(udp_server src/UdpServer.c)
 add_executable(mc_proxy src/MultiCastProxy.c)
 
 add_executable(test_fill src/test.c)
+add_executable(gcf_server2 src/FakeGCFServer2.c src/DieWithMessage.c src/Practical.c include/Pratical.h src/writen.c src/Rio.c include/Rio.h)

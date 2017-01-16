@@ -7,6 +7,15 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/poll.h>
+#include <syslog.h>
+#include <stdlib.h>
+#include <poll.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdarg.h>
 
 // Handle error with user msg
 void DieWithUserMessage(const char *msg, const char *detail);
@@ -32,5 +41,43 @@ enum sizeConstants {
     MAXSTRINGLENGTH = 128,
     BUFSIZE = 512,
 };
+
+#define	SA	struct sockaddr
+
+/* Miscellaneous constants */
+#define	MAXLINE		4096	/* max text line length */
+
+#define	LISTENQ		1024	/* 2nd argument to listen() */
+
+#define INFTIM          (-1)    /* infinite poll timeout */
+
+void
+Bind(int fd, const struct sockaddr *sa, socklen_t salen);
+
+int
+Socket(int family, int type, int protocol);
+
+void
+Listen(int fd, int backlog);
+void	 err_sys(const char *, ...);
+
+void
+err_quit(const char *fmt, ...);
+
+int
+Poll(struct pollfd *fdarray, unsigned long nfds, int timeout);
+
+void
+Close(int fd);
+
+int
+Accept(int fd, struct sockaddr *sa, socklen_t *salenptr);
+
+void
+Write(int fd, void *ptr, size_t nbytes);
+
+void
+Writen(int fd, void *ptr, size_t nbytes);
+
 
 #endif // PRACTICAL_H_
