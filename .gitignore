@@ -36,3 +36,5 @@
 *.dSYM/
 *.su
 
+/build/
+/cmake-build-debug/

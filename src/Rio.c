@@ -3,9 +3,9 @@
 //
 #include <stdio.h>
 #include <wchar.h>
-#include <zconf.h>
 #include <errno.h>
 #include <string.h>
+#include <unistd.h>
 #include "Rio.h"
 
 ssize_t rio_writen(int fd, void *usrbuf, size_t n)

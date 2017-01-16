@@ -4,30 +4,18 @@
 
 /* include fig01 */
 #include	"Pratical.h"
-
+#include    "SoupBin.h"
 
 #define SERV_PORT 29300
-#define USERNAME_LEN 6
-#define PASSWD_LEN 10
 
-#define SESSION_LEN 10
-#define REQ_SEQ_LEN 20
-#define LOGIN_REQ_PACKET_LEN 49
-
-#define LOGIN_ACC_PACKET_LEN 33
-#define SOUP_HEARTBEAT_LEN 3
-
-#define GET_LENGTH(buf) \
- (short)((unsigned char)buf[0] << 8 | (unsigned char)buf[1])
-
-#define GET_TYPE(buf) buf[2]
-
+#define DEBUG 1
 
 void handle(int fd, const char* buf);
 void handleHeartBeat();
 long handleLogin(int fd, const char* buf);
+long ReadStartSequence(const char* buf);
 
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     int					i, maxi, listenfd, connfd, sockfd;
     int					nready;
@@ -122,13 +110,13 @@ void handle(int fd,const char* buf)
     pct_len = GET_LENGTH(buf);
     switch (GET_TYPE(buf)) {
     case 'L':
-        handleLogin(fd, buf_ptr+2);
+        handleLogin(fd, buf_ptr+SOUP_BIN_HDR_LEN);
         break;
     case 'R':
         handleHeartBeat();
         break;
-    default:
-
+        default:
+            printf(" Unhandled \n");
     }
 
 }
@@ -144,55 +132,46 @@ long handleLogin(int fd, const char* buf) {
     char session[SESSION_LEN+1] = { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
 
     // Receive message from client
-    long seq = ReadStartSequence(fd, session);
+    long seq = ReadStartSequence(buf);
     printf("Seq '%ld'\n", seq);
 
     sndBuf[0] = (31 >> 8) & 0xFF;
     sndBuf[1] = 31 & 0xFF;
     sndBuf[2] = 'A';
     strncpy(sndBuf+3, session, 10);
-    snprintf(sndBuf+13, 21, "%*ld",REQ_SEQ_LEN, seq);
+    snprintf(sndBuf+13, 21, "%*ld", REQ_SEQ_LEN, seq);
     sndBuf[34] = '\0';
 
     ssize_t sent = 0;
-    Writen(fd, sndBuf, 33)
+    Writen(fd, sndBuf, 33);
 
     if (DEBUG)
-        printf ("(seq=%d ,hdr[%d,%d,%c] payloadsize=%d) '%s' \n", 0, sndBuf[0],sndBuf[1], sndBuf[2],
+        printf ("(seq=%d ,hdr[%d,%d,%c] payloadsize=%d) '%s' \n", 0, sndBuf[0], sndBuf[1], sndBuf[2],
                 31, sndBuf+3);
     //printf("Sent %zu bytes\n", sent);
     return seq;
 }
 
-long ReadStartSequence(int clntSocket, char *rcvSess) {
+long ReadStartSequence(const char* buf)
+{
+    const char* buf_ptr = buf;
     char userName[USERNAME_LEN+1] = {0};
     char passWord[PASSWD_LEN+1] = {0};
     char session[SESSION_LEN+1] = {0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x00 };
     char reqSeqNum[REQ_SEQ_LEN+1] = {0};
-    ssize_t numBytesRcvd = rio_readn(clntSocket, recv_buffer, LOGIN_REQ_PACKET_LEN);
 
-    short len = (short)((unsigned char)recv_buffer[0] << 8 | (unsigned char)recv_buffer[1]);
-    char loginRequestPacket  = recv_buffer[2];
-    if (loginRequestPacket == 'L') {
-        printf("Rec Login packet!\n");
-    }
+    //ssize_t numBytesRcvd = rio_readn(clntSocket, recv_buffer, LOGIN_REQ_PACKET_LEN);
 
-    strncpy(userName, recv_buffer+3, USERNAME_LEN);
-    userName[USERNAME_LEN+1] = '\0';
-    printf("Username '%s'\n", userName);
+    memcpy(userName, buf_ptr, USERNAME_LEN);
+    buf_ptr += USERNAME_LEN;
 
-    strncpy(passWord, recv_buffer+9, 10);
-    passWord[11] = '\0';
-    printf("Password '%s'\n", passWord);
+    memcpy(passWord, buf_ptr, PASSWD_LEN);
+    buf_ptr += PASSWD_LEN;
 
-    strncpy(session, recv_buffer+19, 10);
+    memcpy(session, buf_ptr, REQ_SEQ_LEN);
     session[11] = '\0';
-    rcvSess = session;
-    printf("Session '%s'\n", session);
 
-    strncpy(reqSeqNum, recv_buffer+29, 20);
-    reqSeqNum[21] = '\0';
-    printf("ReqSeq '%s'\n", reqSeqNum);
+    memcpy(reqSeqNum, buf_ptr, 20);
 
     long seq = atol(reqSeqNum);
     return seq;
