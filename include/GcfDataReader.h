@@ -15,4 +15,5 @@ struct gcf_input_t {
 };
 
 struct gcf_input_t* init(struct gcf_input_t* state, const char* file);
+int fill(struct gcf_input_t* gcf_input);
 #endif //GCF_SERVER_GCFDATAREADER_H

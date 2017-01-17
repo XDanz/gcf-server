@@ -24,7 +24,7 @@ int fill(struct gcf_input_t* gcf_input)
     FILE* fp = gcf_input->fp;
     char *line = NULL;
     size_t l = 0;
-    ssize_t n,
+    ssize_t n;
     char* pbuf = gcf_input->buf;
 
     long curseq = 1;
