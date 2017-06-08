@@ -24,7 +24,7 @@ int SetupTCPServerSocket(const char *service);
 int AcceptTCPConnection(int servSock);
 
 // Handle new TCP client
-void HandleTCPClient(int clntSocket, const char* file);
+void HandleTCPClient(int sock, const char* file);
 // Create and connect a new TCP client socket
 int SetupTCPClientSocket(const char *server, const char *service);
 
