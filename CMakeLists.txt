@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.2)
 project(intro)
 
 project(gcf_server)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99")
+find_package( Threads REQUIRED )
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99 -pthread")
 include_directories(include)
 set(SOURCE_FILES src/FakeGCFServer.c src/DieWithMessage.c include/Pratical.h src/Rio.c include/Rio.h)
 
 add_executable(gcf_server ${SOURCE_FILES})
+target_link_libraries(gcf_server "${CMAKE_THREAD_LIBS_INIT}")
 
 add_executable(readFromFile src/readFromFile.c)
 add_executable(test_snprintf src/test_snprintf.c)

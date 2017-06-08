@@ -10,6 +10,8 @@
 #include <assert.h>
 #include "Rio.h"
 #include <netinet/tcp.h>
+#include <pthread.h>
+
 static const int MAXPENDING = 5; // Maximum outstanding connection requests
 #define USERNAME_LEN 6
 #define PASSWD_LEN 10
@@ -25,6 +27,10 @@ static const int MAXPENDING = 5; // Maximum outstanding connection requests
 
 char recv_buffer[BUFSIZE];
 char send_buffer[1000000];
+pthread_t thread_id = 0;
+char *gcf_file = NULL;
+
+void* SocketHandler(void*);
 
 long ReadStartSequence(int clntSocket, char *rcvSess) {
     char userName[USERNAME_LEN+1] = {0};
@@ -123,7 +129,6 @@ void HandleTCPClient(int clntSocket, const char* file) {
                 fprintf(stderr, "send size %zd !!\n", sent);
                 terminated = 1;
                 break;
-                //DieWithSystemMessage("send() failed!");
             }
 
             if(DEBUG)
@@ -163,6 +168,8 @@ int main(int argc, char *argv[]) {
         perror(argv[2]); //print the error message on stderr.
     }
 
+    gcf_file = argv[2];
+
     // Create socket for incoming connections
     int servSock; // Socket descriptor for server
     if ((servSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
@@ -186,31 +193,39 @@ int main(int argc, char *argv[]) {
     if (listen(servSock, MAXPENDING) < 0)
         DieWithSystemMessage("listen() failed");
 
-    for (;;) { // Run forever
+    int* clntSock;
+    for (;;)
+    { // Run forever
+        printf("waiting for a connection\n");
+        clntSock = (int*)malloc(sizeof(int));
         struct sockaddr_in clntAddr; // Client address
         // Set length of client address structure (in-out parameter)
         socklen_t clntAddrLen = sizeof(clntAddr);
 
         // Wait for a client to connect
-        int clntSock = accept(servSock, (struct sockaddr *) &clntAddr, &clntAddrLen);
+
+        if ((*clntSock = accept(servSock, (struct sockaddr *) &clntAddr, &clntAddrLen)) != -1)
+        {
+            printf("---------------------\nReceived connection from %s\n",inet_ntoa(clntAddr.sin_addr));
+            int i = 1;
+            if(setsockopt( *clntSock, IPPROTO_TCP, TCP_NODELAY, (void *)&i, sizeof(i)) != 0)
+                DieWithSystemMessage("setsockopt(TCP_NODELAY) failed");
+            pthread_create(&thread_id, 0 ,&SocketHandler, (void*)clntSock );
+            pthread_detach(thread_id);
+        }
+
         if (clntSock < 0)
             DieWithSystemMessage("accept() failed");
 
-        int i = 1;
-        if(setsockopt( clntSock, IPPROTO_TCP, TCP_NODELAY, (void *)&i, sizeof(i)) != 0)
-            DieWithSystemMessage("setsockopt(TCP_NODELAY) failed");
-        // clntSock is connected to a client!
-
-        char clntName[INET_ADDRSTRLEN]; // String to contain client address
-        if (inet_ntop(AF_INET, &clntAddr.sin_addr.s_addr, clntName,
-                sizeof(clntName)) != NULL)
-            printf("Handling client %s/%d\n", clntName, ntohs(clntAddr.sin_port));
-        else
-            puts("Unable to get client address");
-
-        printf(" HandleTCPClient => \n");
-        HandleTCPClient(clntSock, argv[2]);
-        printf(" HandleTCPClient => done \n");
     }
-    // NOT REACHED
+}
+
+void* SocketHandler(void* lp) {
+    int *csock = (int*)lp;
+    printf(" HandleTCPClient => \n");
+    HandleTCPClient(*csock, gcf_file);
+    printf(" HandleTCPClient => done \n");
+
+    free(csock);
+    return 0;
 }

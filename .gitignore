@@ -17,7 +17,7 @@
 *.lo
 .idea/*
 
-
+cmake-build-debug/
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
@@ -36,3 +36,6 @@
 *.dSYM/
 *.su
 
+.idea/
+build/
+cmake/
