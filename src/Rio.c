@@ -8,7 +8,8 @@
 #include <string.h>
 #include "Rio.h"
 
-ssize_t rio_writen(int fd, void *usrbuf, size_t n)
+ssize_t
+rio_writen(int fd, void *usrbuf, size_t n)
 {
     size_t nleft = n;
     ssize_t nwritten;

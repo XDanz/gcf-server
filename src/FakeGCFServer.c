@@ -22,8 +22,6 @@ static const int MAXPENDING = 5; // Maximum outstanding connection requests
 
 #define DEBUG 0
 
-
-char recv_buffer[BUFSIZE];
 char send_buffer[1000000];
 pthread_t thread_id = 0;
 char *gcf_file = NULL;
@@ -33,6 +31,7 @@ void* SocketHandler(void*);
 long
 ReadStartSequence(int fd)
 {
+    char recv_buffer[BUFSIZE];
     char userName[USERNAME_LEN+1] = { 0 };
     char passWord[PASSWD_LEN+1] = { 0 };
     char session[SESSION_LEN+1] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
@@ -150,7 +149,6 @@ HandleTCPClient(int sock, const char* file)
     }
 
     if (!terminated) {
-        //char *ptr = send_buffer;
         char buf[] = {0x00, 0x01, 'Z', '\0'};
         if ((sent = rio_writen(sock, buf, 3)) < 0)
             DieWithSystemMessage("send() failed!! \n");
@@ -160,7 +158,6 @@ HandleTCPClient(int sock, const char* file)
 
     printf("Total lines written %ld !\n", fileSequence-seq);
     free(line);
-    //ReadHeartBeat(sock);
     fclose(fp);
 
     close(sock); // Close client socket
@@ -170,67 +167,69 @@ int
 main(int argc, char *argv[])
 {
 
+    struct sockaddr_in addr; // Local address
+    struct sockaddr_in caddr; // Client address
+    int sockfd; // Socket descriptor for server
+    int* csockfd; // Client socket desc.
+    FILE *file;
+    int enable = 1;
+
     /** Test for correct number of arguments **/
     if (argc != 3)
         DieWithUserMessage("Parameter(s)", "<Server Port> <gcf-file>");
 
-    in_port_t servPort = atoi(argv[1]); // First arg:  local port
+    // First arg:  local port
+    in_port_t lstn_port =
+            (in_port_t) atoi(argv[1]);
 
-    FILE *file = fopen (argv[2], "r");
-
-    if (file == NULL) {
+    if (NULL == (file = fopen (argv[2], "r") )) {
         perror(argv[2]); //print the error message on stderr.
     }
 
     gcf_file = argv[2];
 
     // Create socket for incoming connections
-    int servSock; // Socket descriptor for server
-    if ((servSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         DieWithSystemMessage("socket() failed");
 
     // Construct local address structure
-    struct sockaddr_in servAddr;                  // Local address
-    memset(&servAddr, 0, sizeof(servAddr));       // Zero out structure
-    servAddr.sin_family = AF_INET;                // IPv4 address family
-    servAddr.sin_addr.s_addr = htonl(INADDR_ANY); // Any incoming interface
-    servAddr.sin_port = htons(servPort);          // Local port
+    memset(&addr, 0, sizeof(addr));       // Zero out structure
+    addr.sin_family = AF_INET;                // IPv4 address family
+    addr.sin_addr.s_addr = htonl(INADDR_ANY); // Any incoming interface
+    addr.sin_port = htons(lstn_port);          // Local port
 
-    int enable = 1;
-    if (setsockopt(servSock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0)
         DieWithSystemMessage("setsockopt(SO_REUSEADDR) failed");
 
     // Bind to the local address
-    if (bind(servSock, (struct sockaddr*) &servAddr, sizeof(servAddr)) < 0)
+    if (bind(sockfd, (struct sockaddr*) &addr, sizeof(addr)) < 0)
         DieWithSystemMessage("bind() failed");
 
     // Mark the socket so it will listen for incoming connections
-    if (listen(servSock, MAXPENDING) < 0)
+    if (listen(sockfd, MAXPENDING) < 0)
         DieWithSystemMessage("listen() failed");
 
-    int* clntSock;
     for (;;)
     { // Run forever
-        printf("listen 0.0.0.0/%d \n", servPort);
-        clntSock = (int*)malloc(sizeof(int));
-        struct sockaddr_in clntAddr; // Client address
+        printf("listen 0.0.0.0/%d \n", lstn_port);
+        csockfd = (int*)malloc(sizeof(int));
+
         // Set length of client address structure (in-out parameter)
-        socklen_t clntAddrLen = sizeof(clntAddr);
+        socklen_t clntAddrLen = sizeof(caddr);
 
         // Wait for a client to connect
-
-        if ((*clntSock = accept(servSock, (struct sockaddr *) &clntAddr, &clntAddrLen)) != -1)
+        if ((*csockfd = accept(sockfd, (struct sockaddr *) &caddr, &clntAddrLen)) != -1)
         {
-            printf("accept connect from %s, (fd: %d) \n", inet_ntoa(clntAddr.sin_addr), *clntSock);
+            printf("accept connect from %s, (fd: %d) \n", inet_ntoa(caddr.sin_addr), *csockfd);
             int i = 1;
-            if (setsockopt( *clntSock, IPPROTO_TCP, TCP_NODELAY, (void *)&i, sizeof(i)) != 0)
+            if (setsockopt( *csockfd, IPPROTO_TCP, TCP_NODELAY, (void *)&i, sizeof(i)) != 0)
                 DieWithSystemMessage("setsockopt(TCP_NODELAY) failed");
 
-            pthread_create(&thread_id, 0 ,&SocketHandler, (void*)clntSock);
+            pthread_create(&thread_id, 0 ,&SocketHandler, (void*)csockfd);
             pthread_detach(thread_id);
         }
 
-        if (clntSock < 0)
+        if (csockfd < 0)
             DieWithSystemMessage("accept() failed");
 
     }
@@ -239,8 +238,8 @@ main(int argc, char *argv[])
 void*
 SocketHandler(void* fd)
 {
-    int *csock = (int*)fd;
-    HandleTCPClient(*csock, gcf_file);
-    free(csock);
+    int *csock_fd = (int*)fd;
+    HandleTCPClient(*csock_fd, gcf_file);
+    free(csock_fd);
     return 0;
 }
