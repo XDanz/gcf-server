@@ -15,7 +15,7 @@ main(int argc, char *argv[])
     nsecs = 0;
     tfnd = 0;
     flags = 0;
-    while ((opt = getopt(argc, argv, "vnt:")) != -1) {
+    while ((opt = getopt(argc, argv, "v:nt:")) != -1) {
         switch (opt) {
             case 'n':
                 flags = 1;
@@ -44,7 +44,7 @@ main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("name argument = %s\n", argv[optind]);
+    printf("name argument = '%s'\n", argv[optind]);
 
     /* Other code omitted */
 
