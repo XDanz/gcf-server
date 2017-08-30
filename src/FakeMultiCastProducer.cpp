@@ -8,13 +8,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <string.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <Pratical.h>
 #include <errno.h>
 #include <limits.h>
+#include <cstring>
 
 int
 main(int argc, char *argv[])
