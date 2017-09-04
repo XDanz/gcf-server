@@ -131,7 +131,7 @@ HandleTCPClient(int sock, const char* file)
             send_buffer[0] = (char) ((size >> 8) & 0xFF);
             send_buffer[1] = (char) (size & 0xFF);
             send_buffer[2] = 'S';
-            
+
             strncpy(send_buffer+3, line, (size_t) (size-1)); /// Do not include trailing '\n'
             /// size includes '\n' (payload = size-1)
             /// total package = payload + type(1)+ headersize(2) = size-1+1+2)

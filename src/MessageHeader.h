@@ -1,0 +1,29 @@
+//
+// Created by danter on 2017-09-01.
+//
+
+#ifndef MITCH_MESSAGEHEADER_H
+#define MITCH_MESSAGEHEADER_H
+
+#include "MitchTypes.h"
+
+enum MESSAGE_TYPE {
+    TIME = 0x54, SYSTEM_EVENT = 0x53, SYMBOL_DIRECTORY = 0x52, SYMBOL_STATUS = 0x48, ADD_ORDER= 0x41,
+    ORDER_DELETED = 0x44, ORDER_MODIFIED = 0x55, ORDER_BOOK_CLEAR = 0x79, ORDER_EXECUTED = 0x45,
+    ORDER_EXECUTED_WITH_PRICE_AND_SIZE = 0x43, TRADE= 0x50, OFF_BOOK_TRADE = 0x78,
+    TRADE_BREAK= 0x42,
+    AUCTION_INFO = 0x49,
+    STATISTICS = 0x77,
+    ENHANCED_TRADE = 0x90,
+    RECOVERY_TRADE = 0x76
+};
+
+class MessageHeader {
+
+public:
+    mitch::types::UInt8 length;
+    MESSAGE_TYPE message_type;
+
+};
+
+#endif //GCF_SERVER_MESSAGEHEADER_H
