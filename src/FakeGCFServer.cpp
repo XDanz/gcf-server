@@ -1,14 +1,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <string.h>
-#include <stdio.h>
+#include <string>
 #include <Pratical.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <cassert>
 #include "Rio.h"
+#include "SoupBinEncoder.h"
 #include <netinet/tcp.h>
-#include <pthread.h>
+#include <thread>
+#include <cstring>
+#include <fstream>
 
 static const int MAXPENDING = 5; // Maximum outstanding connection requests
 #define USERNAME_LEN 6
@@ -32,10 +33,10 @@ long
 ReadStartSequence(int fd)
 {
     char recv_buffer[BUFSIZE];
-    char userName[USERNAME_LEN+1] = { 0 };
-    char passWord[PASSWD_LEN+1] = { 0 };
-    char session[SESSION_LEN+1] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
-    char reqSeqNum[REQ_SEQ_LEN+1] = { 0 };
+    //char userName[USERNAME_LEN+1] = { 0 };
+    //char passWord[PASSWD_LEN+1] = { 0 };
+    //char session[SESSION_LEN+1] = {0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x00 };
+    //char reqSeqNum[REQ_SEQ_LEN+1] = { 0 };
     rio_readn(fd, recv_buffer, LOGIN_REQ_PACKET_LEN);
 
     short len = (short)((unsigned char)recv_buffer[0] << 8 | (unsigned char)recv_buffer[1]);
@@ -44,22 +45,22 @@ ReadStartSequence(int fd)
         printf("Rec Login packet!\n");
     }
 
-    strncpy(userName, recv_buffer+3, USERNAME_LEN);
+    std::string userName {recv_buffer+3, USERNAME_LEN};
     userName[USERNAME_LEN+1] = '\0';
-    printf("user: '%s',", userName);
+    printf("user: '%s',", userName.c_str());
 
-    strncpy(passWord, recv_buffer+9, 10);
+    std::string passWord {recv_buffer+9, 10};
     passWord[11] = '\0';
-    printf("passwd: '%s' ", passWord);
+    printf("passwd: '%s' ", passWord.c_str());
 
-    strncpy(session, recv_buffer+19, 10);
-    session[11] = '\0';
+    std::string session {recv_buffer+19, 10};
+    //session[11] = '\0';
 
-    strncpy(reqSeqNum, recv_buffer+29, 20);
-    reqSeqNum[21] = '\0';
-    printf(",seq '%s'\n", reqSeqNum);
+    std::string reqSeqNum {recv_buffer+29, 20};
+    //reqSeqNum[21] = '\0';
+    printf(",seq '%s'\n", reqSeqNum.c_str());
 
-    long seq = atol(reqSeqNum);
+    long seq = atol(reqSeqNum.c_str());
     return seq;
 }
 
@@ -88,7 +89,7 @@ HandleLogin(int sock)
     sndBuf[0] = (31 >> 8) & 0xFF;
     sndBuf[1] = 31 & 0xFF;
     sndBuf[2] = 'A';
-    strncpy(sndBuf+3, session, 10);
+    std::strncpy(sndBuf+3, session, 10);
     snprintf(sndBuf+13, 21, "%*ld", REQ_SEQ_LEN, seq);
     sndBuf[34] = '\0';
 
@@ -102,54 +103,43 @@ HandleLogin(int sock)
     printf("Login Accept! \n");
     return seq;
 }
+size_t encode_write(int sock, char *buf, const std::string& line);
 
 void
 HandleTCPClient(int sock, const char* file)
 {
     long seq;
     FILE* fp;
-    char *line = NULL;
+    std::string line;
     size_t l = 0;
     ssize_t read, sent;
 
     seq = HandleLogin(sock);
-    fp = fopen(file, "r");
-    if(fp == NULL)
-        exit(EXIT_FAILURE);
+    std::string file_name {file};
+    std::ifstream inFile {file_name};
 
-    pthread_create(&thread_id, 0, &ReadHeartBeat, (void*)&sock );
-    pthread_detach(thread_id);
+    std::thread heartBeatThread(ReadHeartBeat, (void*)&sock);
+    heartBeatThread.detach();
 
-    long fileSequence = 1, terminated = 0;
-    while ((read = getline(&line, &l, fp)) != EOF)
+    long fileSequence = 1;
+    bool terminated = false;
+
+
+    char buf[BUFSIZ] = { 0 };
+    while (std::getline(inFile, line))
     {
-        if (fileSequence++ >= seq) {
-            memset(&send_buffer, 0, sizeof(BUFSIZE));       // Zero out structure
-            int size = (int) read;
-            assert(size > 0);
-
-            send_buffer[0] = (char) ((size >> 8) & 0xFF);
-            send_buffer[1] = (char) (size & 0xFF);
-            send_buffer[2] = 'S';
-            
-            strncpy(send_buffer+3, line, (size_t) (size-1)); /// Do not include trailing '\n'
-            /// size includes '\n' (payload = size-1)
-            /// total package = payload + type(1)+ headersize(2) = size-1+1+2)
-            if ((sent = rio_writen(sock, send_buffer, (size_t) (size+2))) < 0 ) {
-                fprintf(stderr, "send() failed with line \"%s\" \n", line);
-                fprintf(stderr, "send size %zd !!\n", sent);
-                terminated = 1;
+        if (fileSequence++ >= seq)
+        {
+            if (encode_write(sock, buf,line) < 0)
+            {
+                terminated = true;
                 break;
             }
-
-            if (DEBUG)
-                printf ("(seq=%ld ,sent=%zd,hdr[%d,%d,%c] payloadsize=%d) %s", fileSequence-1, sent,send_buffer[0],send_buffer[1], send_buffer[2],
-                        size, line);
-            assert(sent == (size+2));
         }
     }
 
-    if (!terminated) {
+
+    if (terminated) {
         char buf[] = {0x00, 0x01, 'Z', '\0'};
         if ((sent = rio_writen(sock, buf, 3)) < 0)
             DieWithSystemMessage("send() failed!! \n");
@@ -158,10 +148,16 @@ HandleTCPClient(int sock, const char* file)
     }
 
     printf("Total lines written %ld !\n", fileSequence-seq);
-    free(line);
+
     fclose(fp);
 
     close(sock); // Close client socket
+}
+
+size_t encode_write(int sock, char *buf, const std::string& line)
+{
+    size_t size = soupbin::encode(buf, line);
+    return static_cast<size_t>(rio_writen(sock, buf, size));
 }
 
 int
