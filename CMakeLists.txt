@@ -4,7 +4,13 @@ include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 find_package( Threads REQUIRED )
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
 include_directories(include)
-set(SOURCE_FILES src/FakeGCFServer.cpp src/DieWithMessage.cpp include/Pratical.h src/Rio.cpp include/Rio.h src/SoupBinEncoder.cpp)
+set(SOURCE_FILES src/FakeGCFServer.cpp src/DieWithMessage.cpp include/Pratical.h src/Rio.cpp include/Rio.h
+        src/SoupBinEncoder.cpp
+        src/SoupBinHeader.h
+        src/SoupBinHeader.cpp
+        src/SoupBinSequenced.cpp
+        src/SoupBinSequenced.h
+        )
 
 add_executable(gcf_server ${SOURCE_FILES})
 target_link_libraries(gcf_server "${CMAKE_THREAD_LIBS_INIT}")

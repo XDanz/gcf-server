@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <iostream>
 #include "SoupBinEncoder.h"
+#include "SoupBinSequenced.h"
 
 size_t soupbin::encode(char* buf, const std::string& line)
 {
@@ -21,6 +22,22 @@ size_t soupbin::encode(char* buf, const std::string& line)
     for (char it : line) buf[i++] = it;
     return sz+2;
 }
+
+size_t soupbin::encode(char* buf, soupbin::SoupBinSequenced& sequenced)
+{
+    size_t sz = sequenced.getHdr()->getPayload_length();
+    uint16_t a = htons(uint16_t(sz));
+
+    auto *ptr = reinterpret_cast<char*>(&a);
+    int i = 0;
+    for (; i <sizeof(short);i++ ) buf[i] = *ptr++;
+    buf[i++] = 'S';
+
+    for (char it : sequenced.getPayload()) buf[i++] = it;
+    return sz+2;
+}
+
+
 
 size_t soupbin::decode_length(const char* buf)
 {

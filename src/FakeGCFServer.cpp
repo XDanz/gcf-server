@@ -130,7 +130,7 @@ HandleTCPClient(int sock, const char* file)
     {
         if (fileSequence++ >= seq)
         {
-            if (encode_write(sock, buf,line) < 0)
+            if (encode_write(sock, buf, line) < 0)
             {
                 terminated = true;
                 break;

@@ -4,6 +4,7 @@
 
 #include "SoupBinEncoder.h"
 #include "gtest/gtest.h"
+#include "SoupBinSequenced.h"
 
 TEST(SoupBinEncoderTest, test_encode_string1)
 {
@@ -14,4 +15,10 @@ TEST(SoupBinEncoderTest, test_encode_string1)
 
     std::cout << "buf: " << buf << std::endl;
 
+}
+
+TEST(SoupBinEncoderTest, test_initialize)
+{
+    std::string msg = "BDTe;i1071;SiNX;s1;TEt11;SYm2;NAmNASDAQ OMX Nordic;";
+    soupbin::SoupBinSequenced message = { msg };
 }
