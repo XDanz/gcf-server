@@ -17,7 +17,7 @@ target_link_libraries(gcf_server "${CMAKE_THREAD_LIBS_INIT}")
 
 add_executable(readFromFile src/readFromFile.cpp)
 
-add_executable(readFromFile2 src/readFromFile2.cpp src/SoupBinEncoder.cpp src/SoupBinEncoder.h)
+add_executable(readFromFile2 src/readFromFile2.cpp src/SoupBinEncoder.cpp src/SoupBinEncoder.h src/SoupBinHeader.h )
 
 add_executable(test_snprintf src/test_snprintf.c)
 add_executable(get_pid src/getpid.c)

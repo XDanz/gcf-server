@@ -121,14 +121,14 @@ HandleTCPClient(int sock, const char* file)
     std::thread heartBeatThread(ReadHeartBeat, (void*)&sock);
     heartBeatThread.detach();
 
-    long fileSequence = 1;
+    long lineNum = 1;
     bool terminated = false;
 
 
     char buf[BUFSIZ] = { 0 };
     while (std::getline(inFile, line))
     {
-        if (fileSequence++ >= seq)
+        if (lineNum++ >= seq)
         {
             if (encode_write(sock, buf, line) < 0)
             {
@@ -139,7 +139,7 @@ HandleTCPClient(int sock, const char* file)
     }
 
 
-    if (terminated) {
+    if (terminated || inFile.eof()) {
         char buf[] = {0x00, 0x01, 'Z', '\0'};
         if ((sent = rio_writen(sock, buf, 3)) < 0)
             DieWithSystemMessage("send() failed!! \n");
@@ -147,10 +147,7 @@ HandleTCPClient(int sock, const char* file)
         printf ("(seq=%d ,sent=%zd,hdr[%d,%d,%c] payloadsize=1) '' \n", 0, sent, buf[0],buf[1], buf[2]);
     }
 
-    printf("Total lines written %ld !\n", fileSequence-seq);
-
-    fclose(fp);
-
+    printf("Total lines written %ld !\n", lineNum-seq);
     close(sock); // Close client socket
 }
 

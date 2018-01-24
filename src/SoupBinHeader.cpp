@@ -3,4 +3,3 @@
 //
 
 #include "SoupBinHeader.h"
-soupbin::SoupBinHeader::SoupBinHeader() { }

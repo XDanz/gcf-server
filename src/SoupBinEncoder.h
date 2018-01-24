@@ -8,7 +8,7 @@
 namespace soupbin {
     size_t encode(char* buf, const std::string& line);
     size_t decode_length(const char* buf);
-    size_t soupbin::encode(char* buf, soupbin::SoupBinSequenced& sequenced)
+    size_t encode(char* buf, soupbin::SoupBinSequenced& sequenced);
 }
 
 
